@@ -28,7 +28,7 @@ cohorts_A <- (year_pupil_data_start - max_age_pupil_data):(year_pupil_data_start
 cohorts_B <- (year_pupil_data_start - min_age_pupil_data):(year_mye_last - min_age_pupil_data)
 cohorts_C <- (year_mye_last - (min_age_pupil_data - 1)):year_mye_last
 cohorts_D <- (year_pupil_data_start - max_age_pupil_data):(year_mye_last - min_age_pupil_data)
-cohorts_E <- (year_pupil_data_start - max_age_pupil_data):(year_mye_last - age_adult)
+cohorts_E <- (year_pupil_data_start - max_age_pupil_data):(year_mye_last - age_adult) #(max_age_pupil_data + 1))
 
 ages_A <- 0:max_age_pupil_data
 ages_B <- 0:min_age_pupil_data
@@ -290,8 +290,6 @@ internal_net_D <- mye_2001_24 %>%
   filter(between(age, min_age_pupil_data + 1, max_age_pupil_data)) %>%
   rename(internal_net = value) %>%
   select(-component)
-  # group_by(gss_code, year, sex, age) %>%
-  # summarise(internal_net = sum(value), .groups = "drop")
 
 net_flows_D <- cohort_change_D %>%
   select(-gss_name) %>%
@@ -320,7 +318,57 @@ modelled_flows_D <- modelled_flows_DB2C %>%
 
 #-----
 
-# 6. population for earlier years
+# 10. segment E
+
+start_cohort_E <- population_lad_D %>%
+  mutate(cohort = year - age) %>%
+  filter(age == max_age_pupil_data,
+         cohort %in% cohorts_E) %>%
+  select(gss_code, gss_name, sex, cohort, start_cohort = value)
+
+end_cohort_E <- mye_2001_24 %>%
+  mutate(cohort = year - age) %>%
+  filter(between(year, year_pupil_data_start + 1, year_mye_last),
+         cohort %in% cohorts_E,
+         component == "population",
+         age == age_adult) %>%
+  # group_by(gss_code, gss_name, sex, cohort) %>%
+  # filter(age == max(age)) %>%
+  # ungroup() %>%
+  select(gss_code, gss_name, sex, cohort, end_cohort = value)
+
+residual_difference_E <- mye_2001_24 %>%
+  mutate(cohort = year - age) %>%
+  filter(between(age, max_age_pupil_data + 1, age_adult),
+         cohort %in% cohorts_E,
+         component == "internal_net") %>%
+  group_by(gss_code, sex, cohort) %>%
+  summarise(change = sum(value), .groups = "drop") %>%
+  left_join(start_cohort_E, by = NULL) %>%
+  left_join(end_cohort_E, by = NULL) %>%
+  mutate(residual_change = end_cohort - (start_cohort + change)) %>%
+  select(-c(start_cohort, end_cohort, change))
+
+base_flows_E <- hybrid_international %>%
+  mutate(value = case_when(
+    component %in% c("international_in", "international_out") & value < 0.1 ~ 0.1,
+    TRUE ~ value
+  )) %>%
+  pivot_wider(names_from = "component", values_from = "value") %>%
+  mutate(cohort = year - age) %>%
+  filter(cohort %in% cohorts_E,
+         between(age, max_age_pupil_data + 1, age_adult)) %>%
+  select(year, cohort, sex,
+         gss_code, gss_name,
+         m_in = international_in,
+         m_out = international_out,
+         k_net = international_net)
+
+message("Segment E flows")
+
+modelled_flows_E <- fit_migration_flows(residual_difference_E, base_flows_E)
+
+# 11. population for earlier years - segment A
 
 residual_difference_A <- population_no_international %>%
   mutate(cohort = year - age) %>%
@@ -357,10 +405,11 @@ modelled_flows_A <- fit_migration_flows(residual_difference_A, base_flows_A)
 combined_modelled_flows <- bind_rows(modelled_flows_A,
                                      modelled_flows_B,
                                      modelled_flows_C,
-                                     modelled_flows_D) %>%
+                                     modelled_flows_D,
+                                     modelled_flows_E) %>%
   arrange(gss_code, sex, component, year, age)
 
-# combine modelled and original international flows
+# 12. combine modelled and original international flows
 
 combined_international <- mye_2001_24 %>%
   filter(component %in% c("international_in", "international_out", "international_net")) %>%
@@ -372,12 +421,12 @@ combined_international <- mye_2001_24 %>%
   )) %>%
   select(-mye_value)
 
-# rebuild population using combined international flows
+# 13. rebuild population using combined international flows
 
 modelled_population <- create_pop_series(mye_coc = mye_2001_24, 
                                          modelled_flows = combined_international,
                                          yr_start = 2001,
-                                         yr_end = 2024,
+                                         yr_end = year_mye_last,
                                          age_max = 90)
 
 saveRDS(object = modelled_population,
@@ -398,12 +447,12 @@ if(FALSE){
     mutate(version = "cohort births")
   
   compare_pop <- modelled_population %>%
-    filter(age <= 15,
+    filter(age <= 21,
            component == "population") %>%
     mutate(version = "modelled") %>%
     bind_rows(
       mye_2001_24 %>%
-        filter(age <= 15,
+        filter(age <= 21,
                component == "population") %>%
         mutate(version = "original"),
       cohort_births,
@@ -422,6 +471,7 @@ if(FALSE){
   
   
   sel_code <- "E09000005"
+  # sel_code <- "E08000025"
   
   compare_pop %>%
     filter(gss_code== sel_code) %>%
@@ -432,9 +482,10 @@ if(FALSE){
   
   compare_pop %>%
     filter(gss_code== sel_code) %>%
-    filter(age == 4) %>%
+    filter(age %in% c(4, 11, 17, 18)) %>%
     filter(version %in% c("original", "modelled", "cohort births", "pupils", "GP")) %>%
     ggplot(aes(x = year, y = value, colour = version)) +
-    geom_line() 
+    geom_line() +
+    facet_wrap("age")
   
 }
