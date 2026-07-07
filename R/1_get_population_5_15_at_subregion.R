@@ -26,7 +26,14 @@ unzip(tmp_zip,
 
 spc_cbm_data <- read_csv(file.path(tempdir(), "data/spc_cbm.csv"))
 
-spc_cbm_data_11_19 <- read_csv("https://data.london.gov.uk/download/ex9jd/jz3/resident_pupils_lea_ncy_2011_2019_from_cbm.csv")
+#spc_cbm_data_11_19 <- read_csv("https://data.london.gov.uk/download/ex9jd/jz3/resident_pupils_lea_ncy_2011_2019_from_cbm.csv")
+
+# download.file("https://data.london.gov.uk/download/ex9jd/jz3/resident_pupils_lea_ncy_2011_2019_from_cbm.csv", 
+#               destfile = "data/raw/resident_pupils_lea_ncy_2011_2019_from_cbm.csv", 
+#               mode = "wb")
+
+spc_cbm_data_11_19 <- read_csv("data/raw/resident_pupils_lea_ncy_2011_2019_from_cbm.csv")
+
 
 ind_schools <- read_csv(file.path(tempdir(), "data/spc_pupils_age_and_sex.csv"))
 
@@ -112,6 +119,15 @@ pupil_data <- convert_geographies_to_latest(
   count_names = c("value")
 )
 
+state_funded_pupils_residence <- convert_geographies_to_latest(
+  data = resident_pupils_state,
+  lookup = new_old_la_lookup,
+  geog_from_data = "gss_code",
+  geog_from_lookup = "old_las", 
+  geog_to_lookup = "new_las",
+  count_names = c("value")
+)
+  
   ### 4.2. converting the local education codes that appear as county codes
   ### what we will do is change it to the code corresponding to any of its constituent local authorities. It doesn't matter which one - they will all map onto the correct itl
   ### roughly repurposing old code to do this
@@ -125,11 +141,21 @@ for(i in counties_to_replace){
   la_to_replace <- la_county_lookup[cty21cd == i, lad21cd][1] # taking the  first local authority listed beside the county to replace, to replace that county. 
   pupil_data[new_las == i, new_las := la_to_replace]
 }
- 
+
+for(i in counties_to_replace){
+  la_to_replace <- la_county_lookup[cty21cd == i, lad21cd][1] # taking the  first local authority listed beside the county to replace, to replace that county. 
+  state_funded_pupils_residence[new_las == i, new_las := la_to_replace]
+}
+
     #### for Northampton, we need to just change it manually to one of its constituent local authorities. Because E10000021 was split into E06000061 and E06000062 (Northamptonshire was split into North and West). The only solution I can think of code them both as Northampton before it was split, either with a new code or the pre-split code.
 pupil_data[new_las == "E10000021", new_las := "E06000061"]
  
 pupil_data_at_la <- copy(pupil_data) # because we'll need to save it at la-level too, and we're aggregating it to subregions below as the main output of this script. And I'd rather save everything we need at the section at the end, rather than save things at unexpected places in the script. 
+
+state_funded_pupils_residence[new_las == "E10000021", new_las := "E06000061"]
+
+state_funded_pupils_residence <- copy(state_funded_pupils_residence) # because we'll need to save it at la-level too, and we're aggregating it to subregions below as the main output of this script. And I'd rather save everything we need at the section at the end, rather than save things at unexpected places in the script. 
+
 
 
   ### 4.3. aggregating the local authorities to subregions
@@ -154,9 +180,18 @@ pupil_data_at_la <- pupil_data_at_la[age %in% 5:15, ]
 pupil_data_at_la[, age := as.numeric(age)]
 colnames(pupil_data_at_la)[1] <- "gss_code"
 
+
+state_funded_pupils_residence <- state_funded_pupils_residence[age %in% 5:15, ]
+state_funded_pupils_residence[, age := as.numeric(age)]
+colnames(state_funded_pupils_residence)[1] <- "gss_code"
+
+
+
 saveRDS(object = pupil_data_at_la,
         file = "data/intermediate/total_pupils_lad_5_15_2015_2024.rds") ## not automated yet, years hardcoded etc...won't take long to do
 
 saveRDS(object = pupil_data,
         file = "data/intermediate/total_pupils_itl_5_15_2015_2024.rds")
 
+saveRDS(object = state_funded_pupils_residence,
+        file = "data/intermediate/resident_pupils_state.rds")
