@@ -1,3 +1,5 @@
+## TO DO, 03/08/2026, any adjustments to run with the new adjusted mye series
+
 
 ## 0. libraries and functions
 library(readr)
@@ -81,10 +83,7 @@ resident_pupils_11_19 <- spc_cbm_data_11_19 %>%
   rename(gss_code = lea9, gss_name = lea_name, value = count) %>%
   select(gss_code, gss_name, year, age, value)
 
-setdiff(resident_pupils_11_19$gss_code, resident_pupils_state_20_onwards$gss_code) ## some differences in codes between the two datasets, pre 2020 and 2020 onwards, but it'll be taken care of below in section 3. Mostly by new_old_la_lookup
-setdiff(resident_pupils_state_20_onwards$gss_code, resident_pupils_11_19$gss_code)
 
-## HERE, where stopped
 resident_pupils_state <- rbind(resident_pupils_state_20_onwards, resident_pupils_11_19) %>%
   filter(year >= 2015)
 
@@ -107,7 +106,7 @@ pupil_data <- pupil_data[, c("gss_code", "year", "age", "value")] # getting rid 
 ## 4. aggregating the data to subregions
 ### overall, this is a complex process, far more difficult than it should be. The data from Schools, Pupils, and their Characteristics come out in a mix of local authorities, unitary authorities, and even counties, with several different versions across the years. 
 ### three steps needed, which I should try to cut down a bit. The first is updating an assortment of old local authorities to new ones. These are an odd few which were hard to track down and didn't seem to appear in many lookups (but it may be possible to do with in the same step as step 3). The second step was getting rid of all on the county-level codes in the dataset, and instead assigning the area to one of its constituent local authorities (which is fine if we're aggregating up to subregion). The third step is the aggregation to subregions itself. The lookup we use for this contains all of the local authority codes across all updates back to 2021 together - in this way, it picks up both old and new local authorities. Have checked and all are covered.  
-### this section was mostly lifted and amended from the subregional pupil projections repo. So definitely needs to be amended and harmonised and so on.
+### this section was mostly lifted and amended from another repo. So definitely needs to be amended and harmonised and so on.
 
   ### 4.1. updating a few of the local authority codes in the dataset - some of the older ones that were hard to chase down in the new lookups
 pupil_data <- convert_geographies_to_latest(

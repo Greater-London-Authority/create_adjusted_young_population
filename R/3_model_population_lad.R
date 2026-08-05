@@ -371,6 +371,7 @@ modelled_flows_E <- fit_migration_flows(residual_difference_E, base_flows_E)
 # 11. population for earlier years - segment A
 
 residual_difference_A <- population_no_international %>%
+  select(-gss_name) %>%
   mutate(cohort = year - age) %>%
   filter(year <= year_gp_data_start) %>%
   filter(cohort %in% cohorts_A) %>%

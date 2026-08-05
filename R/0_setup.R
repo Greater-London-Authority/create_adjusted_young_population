@@ -28,15 +28,18 @@ check_and_create_dir("data/processed")
 download.file(url = "https://data.london.gov.uk/download/e561x/f47d4a48-4b03-447e-a9ac-918a8d0eecab/gp_sya_lad.rds",
               destfile = "data/intermediate/gp_sya_lad.rds")
 
-download.file(url = "https://data.london.gov.uk/download/ex9jd/ba752f34-0b54-4184-9251-8e2e94ae97ee/full_modelled_estimates_series_EW(2023_geog).rds",
-              destfile = "data/intermediate/mye_2001_24_rev.rds")
+#download.file(url = "https://data.london.gov.uk/download/ex9jd/ba752f34-0b54-4184-9251-8e2e94ae97ee/full_modelled_estimates_series_EW(2023_geog).rds",
+#              destfile = "data/intermediate/mye_2001_24_rev.rds")
 
 
-url_current_mye <- "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/estimatesofthepopulationforenglandandwales/mid2011tomid2024detailedtimeseries/myebtablesenglandwales20112024.xlsx"
+url_current_mye <- "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/estimatesofthepopulationforenglandandwales/mid2011tomid2025detailedtimeseries/myebtablesenglandwales20112025.xlsx" # DR - changed to 2025 version of myes
 
 fetch_and_clean_mye_data(url_raw = url_current_mye,
                          fpath_raw = "data/raw/mye_2011_on(2023_geog).xlsx",
                          fpath_clean = "data/intermediate/mye_2011_on(2023_geog).rds",
                          sheet_name = "MYEB2")
+
+
+
 
 
