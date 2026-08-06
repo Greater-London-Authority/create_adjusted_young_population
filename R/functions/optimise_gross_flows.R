@@ -9,16 +9,16 @@
 optimise_gross_flows <- function(base_in, base_out, target_net, jump_scale = 10) {
 
   # as flows are modelled as Poisson distributions, values must be integers for the main part of the modelling process
-  base_out <- max(base_out, 0.5)
-  base_in <- max(base_in, 0.5)
+  base_out <- abs(base_out)
+  base_in <- abs(base_in)
   base_net <- round(base_in - base_out, 0)
   change_net = target_net - base_net
-
+  
   max_iterations <- ceiling(2 * abs(change_net))
-
-  new_in <- round(base_in, 0)
-  new_out <- round(base_out, 0)
-
+  
+  new_in <- round(max(base_in, 1), 0)
+  new_out <- round(max(base_out, 1), 0)
+  
   #starting from the base flows, make adjustments to the gross flows until target net flow is reached
   j <- 1
   while((abs(target_net - (new_in - new_out)) > 0.5) & (j <= max_iterations)){

@@ -31,7 +31,7 @@ fit_migration_flows <- function(residual_change_cohort, annual_international) {
   
   area_list <- sample(unique(residual_change_cohort$gss_code))
   
-  n_cores <- 3 * detectCores()/4 # Or manually set this to the number of cores you want to use
+  n_cores <- round(3 * detectCores()/4) # Or manually set this to the number of cores you want to use
   cl <- makeCluster(n_cores)
   registerDoParallel(cl)
   n <- floor(length(area_list)/n_cores)
